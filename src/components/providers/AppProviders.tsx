@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { PrivyProvider } from "@privy-io/react-auth";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
-import { arbitrum } from "viem/chains";
+import { PrivyProvider } from '@privy-io/react-auth';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState, type ReactNode } from 'react';
+import { arbitrum } from 'viem/chains';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -37,14 +37,14 @@ export function AppProviders({ children }: AppProvidersProps) {
       appId={privyAppId}
       config={{
         appearance: {
-          theme: "dark",
-          accentColor: "#6366f1",
+          theme: 'dark',
+          accentColor: '#6366f1',
           logo: undefined,
         },
-        loginMethods: ["email"],
+        loginMethods: ['email'],
         embeddedWallets: {
           ethereum: {
-            createOnLogin: "users-without-wallets",
+            createOnLogin: 'users-without-wallets',
           },
         },
         defaultChain: arbitrum,

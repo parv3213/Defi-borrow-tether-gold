@@ -1,15 +1,14 @@
-"use client";
+'use client';
 
-import { TokenAmount } from "@/components/shared/TokenAmount";
-import { TOKENS } from "@/config/tokens";
-import { useSmartAccount } from "@/hooks/useSmartAccount";
-import { useTokenBalances } from "@/hooks/useTokenBalances";
-import { getArbiscanAddressUrl, truncateAddress } from "@/lib/format";
+import { TokenAmount } from '@/components/shared/TokenAmount';
+import { TOKENS } from '@/config/tokens';
+import { useSmartAccount } from '@/hooks/useSmartAccount';
+import { useTokenBalances } from '@/hooks/useTokenBalances';
+import { getArbiscanAddressUrl, truncateAddress } from '@/lib/format';
 
 export function WalletInfo() {
   const { smartAccountAddress, isLoading: accountLoading } = useSmartAccount();
-  const { usdt0Balance, xaut0Balance, isLoading: balancesLoading } =
-    useTokenBalances();
+  const { usdt0Balance, xaut0Balance, isLoading: balancesLoading } = useTokenBalances();
 
   if (accountLoading) {
     return (
@@ -69,7 +68,7 @@ export function WalletInfo() {
                         showSymbol={false}
                       />
                     ) : (
-                      "0.00"
+                      '0.00'
                     )}
                   </span>
                 </div>
@@ -84,7 +83,7 @@ export function WalletInfo() {
                         maxDecimals={6}
                       />
                     ) : (
-                      "0.000000"
+                      '0.000000'
                     )}
                   </span>
                 </div>

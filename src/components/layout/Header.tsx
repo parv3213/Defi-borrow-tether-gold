@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useSmartAccount } from "@/hooks/useSmartAccount";
-import { truncateAddress } from "@/lib/format";
-import { useLogout, usePrivy } from "@privy-io/react-auth";
-import Link from "next/link";
+import { useSmartAccount } from '@/hooks/useSmartAccount';
+import { truncateAddress } from '@/lib/format';
+import { useLogout, usePrivy } from '@privy-io/react-auth';
+import Link from 'next/link';
 
 export function Header() {
   const { user, authenticated } = usePrivy();
@@ -23,7 +23,7 @@ export function Header() {
             <div className="text-right">
               {smartAccountAddress && (
                 <p className="text-sm text-gray-400">
-                  Smart Wallet:{" "}
+                  Smart Wallet:{' '}
                   <span className="text-white font-mono">
                     {truncateAddress(smartAccountAddress)}
                   </span>

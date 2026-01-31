@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useSmartAccount } from "@/hooks/useSmartAccount";
-import { QRCodeSVG } from "qrcode.react";
-import { useState } from "react";
+import { useSmartAccount } from '@/hooks/useSmartAccount';
+import { QRCodeSVG } from 'qrcode.react';
+import { useState } from 'react';
 
 export function DepositAddress() {
   const { smartAccountAddress, isLoading } = useSmartAccount();
@@ -16,7 +16,7 @@ export function DepositAddress() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error("Failed to copy:", error);
+      console.error('Failed to copy:', error);
     }
   };
 
@@ -43,20 +43,15 @@ export function DepositAddress() {
         {/* Warning */}
         <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
           <p className="text-sm text-yellow-400">
-            <span className="font-semibold">⚠️ Important:</span> Only send USDT0
-            on Arbitrum One to this address. Sending other tokens or using the
-            wrong network will result in loss of funds.
+            <span className="font-semibold">⚠️ Important:</span> Only send USDT0 on Arbitrum One to
+            this address. Sending other tokens or using the wrong network will result in loss of
+            funds.
           </p>
         </div>
 
         {/* QR Code */}
         <div className="flex justify-center p-4 bg-white rounded-lg">
-          <QRCodeSVG
-            value={smartAccountAddress}
-            size={180}
-            level="H"
-            includeMargin={false}
-          />
+          <QRCodeSVG value={smartAccountAddress} size={180} level="H" includeMargin={false} />
         </div>
 
         {/* Address */}

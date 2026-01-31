@@ -1,5 +1,5 @@
-import { createPublicClient, http } from "viem";
-import { arbitrum } from "viem/chains";
+import { createPublicClient, http } from 'viem';
+import { arbitrum } from 'viem/chains';
 
 const rpcUrl = process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || arbitrum.rpcUrls.default.http[0];
 

@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { LoginCard } from "@/components/auth/LoginCard";
-import { usePrivy } from "@privy-io/react-auth";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { LoginCard } from '@/components/auth/LoginCard';
+import { usePrivy } from '@privy-io/react-auth';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function HomePage() {
   const { authenticated, ready } = usePrivy();
@@ -11,7 +11,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (ready && authenticated) {
-      router.push("/dashboard");
+      router.push('/dashboard');
     }
   }, [ready, authenticated, router]);
 
@@ -30,7 +30,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="absolute bottom-4 text-center text-sm text-gray-500">
         <p>
-          Powered by{" "}
+          Powered by{' '}
           <a
             href="https://morpho.org"
             target="_blank"
@@ -38,8 +38,8 @@ export default function HomePage() {
             className="text-indigo-400 hover:text-indigo-300"
           >
             Morpho
-          </a>{" "}
-          on{" "}
+          </a>{' '}
+          on{' '}
           <a
             href="https://arbitrum.io"
             target="_blank"

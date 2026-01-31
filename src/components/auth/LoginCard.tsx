@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy } from '@privy-io/react-auth';
 
 export function LoginCard() {
   const { login, ready, authenticated } = usePrivy();
@@ -24,9 +24,7 @@ export function LoginCard() {
   return (
     <div className="bg-gray-800 rounded-2xl p-8 w-full max-w-md shadow-xl border border-gray-700">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          DeFi Borrowing
-        </h1>
+        <h1 className="text-3xl font-bold text-white mb-2">DeFi Borrowing</h1>
         <p className="text-gray-400">
           Deposit USDT, swap to XAUT, and borrow against your gold holdings
         </p>

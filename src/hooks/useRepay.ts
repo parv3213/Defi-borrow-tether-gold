@@ -1,12 +1,16 @@
-"use client";
+'use client';
 
-import { classifyError } from "@/lib/errors";
-import { buildRepayAssetsCalls, buildRepayFullCalls, buildWithdrawCollateralCalls } from "@/services/morpho";
-import { TransactionState } from "@/types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
-import { Address } from "viem";
-import { useSmartAccount } from "./useSmartAccount";
+import { classifyError } from '@/lib/errors';
+import {
+  buildRepayAssetsCalls,
+  buildRepayFullCalls,
+  buildWithdrawCollateralCalls,
+} from '@/services/morpho';
+import { TransactionState } from '@/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
+import { Address } from 'viem';
+import { useSmartAccount } from './useSmartAccount';
 
 interface RepayParams {
   repayAmount: bigint;
@@ -20,49 +24,46 @@ interface WithdrawParams {
 export function useRepay() {
   const { smartAccountAddress, sendTransaction } = useSmartAccount();
   const queryClient = useQueryClient();
-  const [txState, setTxState] = useState<TransactionState>({ status: "idle" });
+  const [txState, setTxState] = useState<TransactionState>({ status: 'idle' });
 
   const repayMutation = useMutation({
     mutationFn: async (params: RepayParams) => {
       if (!smartAccountAddress) {
-        throw new Error("Smart account not initialized");
+        throw new Error('Smart account not initialized');
       }
 
       let calls;
       if (params.repayFull) {
         calls = await buildRepayFullCalls(smartAccountAddress as Address);
       } else {
-        calls = await buildRepayAssetsCalls(
-          params.repayAmount,
-          smartAccountAddress as Address
-        );
+        calls = await buildRepayAssetsCalls(params.repayAmount, smartAccountAddress as Address);
       }
 
       if (calls.length === 0) {
-        throw new Error("No debt to repay");
+        throw new Error('No debt to repay');
       }
 
       const result = await sendTransaction(calls);
       return result;
     },
     onMutate: () => {
-      setTxState({ status: "pending" });
+      setTxState({ status: 'pending' });
     },
-    onSuccess: (data) => {
-      setTxState({ status: "success", hash: data.hash });
-      queryClient.invalidateQueries({ queryKey: ["tokenBalances"] });
-      queryClient.invalidateQueries({ queryKey: ["morphoPosition"] });
+    onSuccess: data => {
+      setTxState({ status: 'success', hash: data.hash });
+      queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
+      queryClient.invalidateQueries({ queryKey: ['morphoPosition'] });
     },
-    onError: (error) => {
+    onError: error => {
       const classified = classifyError(error);
-      setTxState({ status: "error", error: classified.message });
+      setTxState({ status: 'error', error: classified.message });
     },
   });
 
   const withdrawMutation = useMutation({
     mutationFn: async (params: WithdrawParams) => {
       if (!smartAccountAddress) {
-        throw new Error("Smart account not initialized");
+        throw new Error('Smart account not initialized');
       }
 
       const calls = await buildWithdrawCollateralCalls(
@@ -74,16 +75,16 @@ export function useRepay() {
       return result;
     },
     onMutate: () => {
-      setTxState({ status: "pending" });
+      setTxState({ status: 'pending' });
     },
-    onSuccess: (data) => {
-      setTxState({ status: "success", hash: data.hash });
-      queryClient.invalidateQueries({ queryKey: ["tokenBalances"] });
-      queryClient.invalidateQueries({ queryKey: ["morphoPosition"] });
+    onSuccess: data => {
+      setTxState({ status: 'success', hash: data.hash });
+      queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
+      queryClient.invalidateQueries({ queryKey: ['morphoPosition'] });
     },
-    onError: (error) => {
+    onError: error => {
       const classified = classifyError(error);
-      setTxState({ status: "error", error: classified.message });
+      setTxState({ status: 'error', error: classified.message });
     },
   });
 
@@ -102,7 +103,7 @@ export function useRepay() {
   );
 
   const resetState = useCallback(() => {
-    setTxState({ status: "idle" });
+    setTxState({ status: 'idle' });
     repayMutation.reset();
     withdrawMutation.reset();
   }, [repayMutation, withdrawMutation]);

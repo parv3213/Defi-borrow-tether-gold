@@ -1,34 +1,31 @@
-"use client";
+'use client';
 
-import { MARKET_ID } from "@/config/morpho";
-import { fetchUserPositionFromAPI } from "@/services/graphql";
-import { getPosition } from "@/services/morpho";
-import { MorphoPosition } from "@/types";
-import { useQuery } from "@tanstack/react-query";
-import { Address } from "viem";
-import { useSmartAccount } from "./useSmartAccount";
+import { MARKET_ID } from '@/config/morpho';
+import { fetchUserPositionFromAPI } from '@/services/graphql';
+import { getPosition } from '@/services/morpho';
+import { MorphoPosition } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import { Address } from 'viem';
+import { useSmartAccount } from './useSmartAccount';
 
 export function useMorphoPosition() {
   const { smartAccountAddress } = useSmartAccount();
 
   return useQuery<MorphoPosition>({
-    queryKey: ["morphoPosition", smartAccountAddress],
+    queryKey: ['morphoPosition', smartAccountAddress],
     queryFn: async () => {
       if (!smartAccountAddress) {
-        throw new Error("No smart account address");
+        throw new Error('No smart account address');
       }
 
       // Try on-chain data first (more accurate)
       try {
         return await getPosition(smartAccountAddress as Address);
       } catch (error) {
-        console.warn("On-chain position fetch failed, trying API:", error);
+        console.warn('On-chain position fetch failed, trying API:', error);
 
         // Fallback to GraphQL API
-        const apiPosition = await fetchUserPositionFromAPI(
-          MARKET_ID,
-          smartAccountAddress
-        );
+        const apiPosition = await fetchUserPositionFromAPI(MARKET_ID, smartAccountAddress);
 
         if (!apiPosition) {
           // Return empty position

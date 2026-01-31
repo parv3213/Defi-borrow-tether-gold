@@ -1,6 +1,6 @@
-import { createBicoPaymasterClient, createNexusClient, NexusClient } from "@biconomy/sdk";
-import { http, type Account, type Address, type WalletClient } from "viem";
-import { arbitrum } from "viem/chains";
+import { createBicoPaymasterClient, createNexusClient, NexusClient } from '@biconomy/sdk';
+import { http, type Account, type Address, type WalletClient } from 'viem';
+import { arbitrum } from 'viem/chains';
 
 let nexusClientCache: NexusClient | null = null;
 let cachedSignerAddress: Address | null = null;
@@ -14,13 +14,11 @@ export function isGaslessEnabled(): boolean {
   return !!(bundlerUrl && paymasterUrl);
 }
 
-export async function createSmartAccount(
-  walletClient: WalletClient
-): Promise<NexusClient> {
+export async function createSmartAccount(walletClient: WalletClient): Promise<NexusClient> {
   const account = walletClient.account;
 
   if (!account) {
-    throw new Error("Wallet client has no account");
+    throw new Error('Wallet client has no account');
   }
 
   const signerAddress = account.address;
@@ -43,36 +41,36 @@ export async function createSmartAccount(
   let nexusClient: NexusClient;
 
   if (bundlerUrl && paymasterUrl) {
-      // Full gasless mode with paymaster
-      const paymasterClient = createBicoPaymasterClient({
-          paymasterUrl,
-      });
+    // Full gasless mode with paymaster
+    const paymasterClient = createBicoPaymasterClient({
+      paymasterUrl,
+    });
 
-      nexusClient = await createNexusClient({
-          signer: signer as any,
-          chain: arbitrum,
-          transport: http(rpcUrl),
-          bundlerTransport: http(bundlerUrl),
-          paymaster: paymasterClient,
-      });
+    nexusClient = await createNexusClient({
+      signer: signer as any,
+      chain: arbitrum,
+      transport: http(rpcUrl),
+      bundlerTransport: http(bundlerUrl),
+      paymaster: paymasterClient,
+    });
   } else if (bundlerUrl) {
-      // Bundler only - user pays gas
-      nexusClient = await createNexusClient({
-          signer: signer as any,
-          chain: arbitrum,
-          transport: http(rpcUrl),
-          bundlerTransport: http(bundlerUrl),
-      });
+    // Bundler only - user pays gas
+    nexusClient = await createNexusClient({
+      signer: signer as any,
+      chain: arbitrum,
+      transport: http(rpcUrl),
+      bundlerTransport: http(bundlerUrl),
+    });
   } else {
-      // No bundler - use default bundler (may have limitations)
-      // For development/testing without Biconomy infrastructure
-      nexusClient = await createNexusClient({
-          signer: signer as any,
-          chain: arbitrum,
-          transport: http(rpcUrl),
-          // Use a public bundler endpoint for testing
-          bundlerTransport: http(rpcUrl),
-      });
+    // No bundler - use default bundler (may have limitations)
+    // For development/testing without Biconomy infrastructure
+    nexusClient = await createNexusClient({
+      signer: signer as any,
+      chain: arbitrum,
+      transport: http(rpcUrl),
+      // Use a public bundler endpoint for testing
+      bundlerTransport: http(rpcUrl),
+    });
   }
 
   nexusClientCache = nexusClient;

@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { SAFE_LTV, WARNING_LTV } from "@/config/morpho";
-import { TOKENS } from "@/config/tokens";
-import { useMorphoMarket } from "@/hooks/useMorphoMarket";
-import { useMorphoPosition } from "@/hooks/useMorphoPosition";
-import { formatHealthFactor, formatPercent, formatTokenAmount } from "@/lib/format";
+import { SAFE_LTV, WARNING_LTV } from '@/config/morpho';
+import { TOKENS } from '@/config/tokens';
+import { useMorphoMarket } from '@/hooks/useMorphoMarket';
+import { useMorphoPosition } from '@/hooks/useMorphoPosition';
+import { formatHealthFactor, formatPercent, formatTokenAmount } from '@/lib/format';
 
 export function PositionCard() {
   const { data: position, isLoading: positionLoading } = useMorphoPosition();
@@ -14,8 +14,7 @@ export function PositionCard() {
 
   // Check if user has any position
   const hasPosition =
-    position &&
-    (position.collateral > BigInt(0) || position.borrowedAssets > BigInt(0));
+    position && (position.collateral > BigInt(0) || position.borrowedAssets > BigInt(0));
 
   if (isLoading) {
     return (
@@ -49,15 +48,15 @@ export function PositionCard() {
   const isDanger = healthFactor <= 1.1;
 
   const getHealthColor = () => {
-    if (isDanger) return "text-red-400";
-    if (isWarning) return "text-yellow-400";
-    return "text-green-400";
+    if (isDanger) return 'text-red-400';
+    if (isWarning) return 'text-yellow-400';
+    return 'text-green-400';
   };
 
   const getLTVColor = () => {
-    if (ltv > (market?.lltv || 0.77)) return "text-red-400";
-    if (ltv > WARNING_LTV) return "text-yellow-400";
-    return "text-green-400";
+    if (ltv > (market?.lltv || 0.77)) return 'text-red-400';
+    if (ltv > WARNING_LTV) return 'text-yellow-400';
+    return 'text-green-400';
   };
 
   return (
@@ -76,13 +75,13 @@ export function PositionCard() {
           <div
             className={`px-3 py-1 rounded-full text-sm font-medium ${
               isDanger
-                ? "bg-red-500/20 text-red-400"
+                ? 'bg-red-500/20 text-red-400'
                 : isWarning
-                ? "bg-yellow-500/20 text-yellow-400"
-                : "bg-green-500/20 text-green-400"
+                  ? 'bg-yellow-500/20 text-yellow-400'
+                  : 'bg-green-500/20 text-green-400'
             }`}
           >
-            {isDanger ? "At Risk" : isWarning ? "Warning" : "Healthy"}
+            {isDanger ? 'At Risk' : isWarning ? 'Warning' : 'Healthy'}
           </div>
         </div>
 
@@ -125,11 +124,7 @@ export function PositionCard() {
             {/* Current LTV bar */}
             <div
               className={`h-full transition-all ${
-                isDanger
-                  ? "bg-red-500"
-                  : isWarning
-                  ? "bg-yellow-500"
-                  : "bg-green-500"
+                isDanger ? 'bg-red-500' : isWarning ? 'bg-yellow-500' : 'bg-green-500'
               }`}
               style={{ width: `${Math.min(ltv * 100, 100)}%` }}
             />
@@ -138,7 +133,7 @@ export function PositionCard() {
             <span>0%</span>
             <span className="text-yellow-500">67%</span>
             <span className="text-red-500">
-              {market ? `${(market.lltv * 100).toFixed(0)}%` : "77%"}
+              {market ? `${(market.lltv * 100).toFixed(0)}%` : '77%'}
             </span>
           </div>
         </div>
@@ -147,16 +142,12 @@ export function PositionCard() {
         <div className="pt-4 border-t border-gray-700 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Borrow APR</span>
-            <span className="text-gray-300">
-              {market ? formatPercent(market.borrowApr) : "-"}
-            </span>
+            <span className="text-gray-300">{market ? formatPercent(market.borrowApr) : '-'}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Available Liquidity</span>
             <span className="text-gray-300">
-              {market
-                ? `${formatTokenAmount(market.availableLiquidity, 6)} USDT0`
-                : "-"}
+              {market ? `${formatTokenAmount(market.availableLiquidity, 6)} USDT0` : '-'}
             </span>
           </div>
         </div>

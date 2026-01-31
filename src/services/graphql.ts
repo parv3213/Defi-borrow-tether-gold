@@ -1,6 +1,6 @@
-import { GraphQLClient, gql } from "graphql-request";
+import { GraphQLClient, gql } from 'graphql-request';
 
-const MORPHO_API_URL = "https://blue-api.morpho.org/graphql";
+const MORPHO_API_URL = 'https://blue-api.morpho.org/graphql';
 
 const client = new GraphQLClient(MORPHO_API_URL);
 
@@ -58,62 +58,62 @@ export async function fetchMarketFromAPI(
   chainId: number = 42161
 ): Promise<MarketState | null> {
   const query = gql`
-      query GetMarket($marketId: String!, $chainId: Int!) {
-          marketByUniqueKey(uniqueKey: $marketId, chainId: $chainId) {
-              id
-              lltv
-              state {
-                  borrowApy
-                  supplyApy
-                  borrowAssets
-                  supplyAssets
-                  price
-              }
-              collateralAsset {
-                  address
-                  symbol
-                  decimals
-                  priceUsd
-              }
-              loanAsset {
-                  address
-                  symbol
-                  decimals
-                  priceUsd
-              }
-              oracle {
-                  address
-              }
-          }
+    query GetMarket($marketId: String!, $chainId: Int!) {
+      marketByUniqueKey(uniqueKey: $marketId, chainId: $chainId) {
+        id
+        lltv
+        state {
+          borrowApy
+          supplyApy
+          borrowAssets
+          supplyAssets
+          price
+        }
+        collateralAsset {
+          address
+          symbol
+          decimals
+          priceUsd
+        }
+        loanAsset {
+          address
+          symbol
+          decimals
+          priceUsd
+        }
+        oracle {
+          address
+        }
       }
+    }
   `;
 
   try {
     const data = await client.request<{ marketByUniqueKey: any }>(query, {
-        marketId,
-        chainId,
+      marketId,
+      chainId,
     });
-    
+
     if (!data.marketByUniqueKey) return null;
 
     const market = data.marketByUniqueKey;
 
     return {
-        id: market.id,
-        lltv: market.lltv,
-        borrowApy: market.state.borrowApy,
-        supplyApy: market.state.supplyApy,
-        totalBorrowAssets: market.state.borrowAssets,
-        totalSupplyAssets: market.state.supplyAssets,
-        collateralAsset: market.collateralAsset,
-        loanAsset: market.loanAsset,
-        oracle: {
-            address: market.oracle.address,
-            price: market.state.price,
-        },
+      id: market.id,
+      lltv: market.lltv,
+      borrowApy: market.state.borrowApy,
+      supplyApy: market.state.supplyApy,
+      totalBorrowAssets: market.state.borrowAssets,
+      totalSupplyAssets: market.state.supplyAssets,
+      collateralAsset: market.collateralAsset,
+      loanAsset: market.loanAsset,
+      oracle: {
+        address: market.oracle.address,
+        price: market.state.price,
+      },
     };
   } catch (error) {
-    console.error("Failed to fetch market from Morpho API:", error);
+    console.error('Failed to fetch market from Morpho API:', error);
     return null;
   }
 }
@@ -126,11 +126,7 @@ export async function fetchUserPositionFromAPI(
 ): Promise<UserPosition | null> {
   const query = gql`
     query GetPosition($marketId: String!, $userAddress: String!, $chainId: Int!) {
-      position(
-        marketUniqueKey: $marketId
-        userAddress: $userAddress
-        chainId: $chainId
-      ) {
+      position(marketUniqueKey: $marketId, userAddress: $userAddress, chainId: $chainId) {
         id
         user
         market {
@@ -154,7 +150,7 @@ export async function fetchUserPositionFromAPI(
     });
     return data.position;
   } catch (error) {
-    console.error("Failed to fetch position from Morpho API:", error);
+    console.error('Failed to fetch position from Morpho API:', error);
     return null;
   }
 }
@@ -173,12 +169,7 @@ export async function fetchMarketHistory(
       $endTimestamp: Int
     ) {
       marketByUniqueKey(uniqueKey: $marketId, chainId: $chainId) {
-        historicalState(
-          options: {
-            startTimestamp: $startTimestamp
-            endTimestamp: $endTimestamp
-          }
-        ) {
+        historicalState(options: { startTimestamp: $startTimestamp, endTimestamp: $endTimestamp }) {
           timestamp
           totalBorrowAssets
           totalSupplyAssets
@@ -199,68 +190,66 @@ export async function fetchMarketHistory(
     });
     return data.marketByUniqueKey?.historicalState || [];
   } catch (error) {
-    console.error("Failed to fetch market history:", error);
+    console.error('Failed to fetch market history:', error);
     return [];
   }
 }
 
 // Fetch all markets on a chain
-export async function fetchAllMarkets(
-  chainId: number = 42161
-): Promise<MarketState[]> {
+export async function fetchAllMarkets(chainId: number = 42161): Promise<MarketState[]> {
   const query = gql`
-      query GetMarkets($chainId: Int!) {
-          markets(where: { chainId_in: [$chainId] }) {
-              items {
-                  id
-                  lltv
-                  state {
-                      borrowApy
-                      supplyApy
-                      borrowAssets
-                      supplyAssets
-                      price
-                  }
-                  collateralAsset {
-                      address
-                      symbol
-                      decimals
-                      priceUsd
-                  }
-                  loanAsset {
-                      address
-                      symbol
-                      decimals
-                      priceUsd
-                  }
-                  oracle {
-                      address
-                  }
-              }
+    query GetMarkets($chainId: Int!) {
+      markets(where: { chainId_in: [$chainId] }) {
+        items {
+          id
+          lltv
+          state {
+            borrowApy
+            supplyApy
+            borrowAssets
+            supplyAssets
+            price
           }
+          collateralAsset {
+            address
+            symbol
+            decimals
+            priceUsd
+          }
+          loanAsset {
+            address
+            symbol
+            decimals
+            priceUsd
+          }
+          oracle {
+            address
+          }
+        }
       }
+    }
   `;
 
   try {
     const data = await client.request<{
-        markets: { items: any[] };
+      markets: { items: any[] };
     }>(query, { chainId });
-    return (data.markets?.items || []).map((market) => ({
-        id: market.id,
-        lltv: market.lltv,
-        borrowApy: market.state.borrowApy,
-        supplyApy: market.state.supplyApy,
-        totalBorrowAssets: market.state.borrowAssets,
-        totalSupplyAssets: market.state.supplyAssets,
-        collateralAsset: market.collateralAsset,
-        loanAsset: market.loanAsset,
-        oracle: {
-            address: market.oracle.address,
-            price: market.state.price,
-        },
+    return (data.markets?.items || []).map(market => ({
+      id: market.id,
+      lltv: market.lltv,
+      borrowApy: market.state.borrowApy,
+      supplyApy: market.state.supplyApy,
+      totalBorrowAssets: market.state.borrowAssets,
+      totalSupplyAssets: market.state.supplyAssets,
+      collateralAsset: market.collateralAsset,
+      loanAsset: market.loanAsset,
+      oracle: {
+        address: market.oracle.address,
+        price: market.state.price,
+      },
     }));
   } catch (error) {
-    console.error("Failed to fetch markets:", error);
+    console.error('Failed to fetch markets:', error);
     return [];
   }
 }

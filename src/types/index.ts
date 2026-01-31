@@ -1,4 +1,4 @@
-import { Address } from "viem";
+import { Address } from 'viem';
 
 export interface TokenInfo {
   address: Address;
@@ -58,7 +58,7 @@ export interface SwapQuote {
 }
 
 export interface TransactionState {
-  status: "idle" | "pending" | "confirming" | "success" | "error";
+  status: 'idle' | 'pending' | 'confirming' | 'success' | 'error';
   hash?: string;
   error?: string;
 }
