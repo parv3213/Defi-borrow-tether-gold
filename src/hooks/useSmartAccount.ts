@@ -1,11 +1,15 @@
-"use client";
+'use client';
 
-import { clearSmartAccountCache, createSmartAccount, getSmartAccountAddress } from "@/services/biconomy";
-import { NexusClient } from "@biconomy/sdk";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { useCallback, useEffect, useState } from "react";
-import { createWalletClient, custom, type Address, type WalletClient } from "viem";
-import { arbitrum } from "viem/chains";
+import {
+  clearSmartAccountCache,
+  createSmartAccount,
+  getSmartAccountAddress,
+} from '@/services/biconomy';
+import { NexusClient } from '@biconomy/sdk';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useCallback, useEffect, useState } from 'react';
+import { createWalletClient, custom, type Address, type WalletClient } from 'viem';
+import { arbitrum } from 'viem/chains';
 
 interface SmartAccountState {
   nexusClient: NexusClient | null;
@@ -26,15 +30,13 @@ export function useSmartAccount() {
 
   const initSmartAccount = useCallback(async () => {
     // Find embedded wallet
-    const embeddedWallet = wallets.find(
-      (wallet) => wallet.walletClientType === "privy"
-    );
+    const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
 
     if (!embeddedWallet) {
       return;
     }
 
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
       // Get the ethereum provider from embedded wallet
@@ -58,11 +60,11 @@ export function useSmartAccount() {
         error: null,
       });
     } catch (error) {
-      console.error("Failed to initialize smart account:", error);
-      setState((prev) => ({
+      console.error('Failed to initialize smart account:', error);
+      setState(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error : new Error("Failed to initialize"),
+        error: error instanceof Error ? error : new Error('Failed to initialize'),
       }));
     }
   }, [wallets]);
@@ -87,9 +89,10 @@ export function useSmartAccount() {
   const sendTransaction = useCallback(
     async (calls: { to: Address; data: `0x${string}`; value?: bigint }[]) => {
       if (!state.nexusClient) {
-        throw new Error("Smart account not initialized");
+        throw new Error('Smart account not initialized');
       }
 
+      // TODO Simulate transaction before sending
       const hash = await state.nexusClient.sendTransaction({
         calls,
       });
