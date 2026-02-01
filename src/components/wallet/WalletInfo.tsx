@@ -68,7 +68,12 @@ export function WalletInfo() {
                   <span className="text-gray-300">ETH</span>
                   <span className="text-white font-mono">
                     {ethBalance ? (
-                      <TokenAmount amount={ethBalance} token={TOKENS.WETH} showSymbol={false} />
+                      <TokenAmount
+                        amount={ethBalance}
+                        token={TOKENS.WETH}
+                        showSymbol={false}
+                        maxDecimals={6}
+                      />
                     ) : (
                       '0.00'
                     )}
