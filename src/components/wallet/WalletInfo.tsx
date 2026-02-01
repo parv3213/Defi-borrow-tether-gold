@@ -8,7 +8,13 @@ import { getArbiscanAddressUrl, truncateAddress } from '@/lib/format';
 
 export function WalletInfo() {
   const { smartAccountAddress, isLoading: accountLoading } = useSmartAccount();
-  const { usdt0Balance, xaut0Balance, isLoading: balancesLoading } = useTokenBalances();
+  const {
+    usdt0Balance,
+    xaut0Balance,
+    ethBalance,
+    isLoading: balancesLoading,
+    isLoadingEth,
+  } = useTokenBalances();
 
   if (accountLoading) {
     return (
@@ -51,13 +57,23 @@ export function WalletInfo() {
         <div className="pt-4 border-t border-gray-700">
           <p className="text-sm text-gray-400 mb-3">Token Balances</p>
           <div className="space-y-3">
-            {balancesLoading ? (
+            {balancesLoading || isLoadingEth ? (
               <div className="animate-pulse space-y-2">
                 <div className="h-6 bg-gray-700 rounded w-1/2"></div>
                 <div className="h-6 bg-gray-700 rounded w-1/2"></div>
               </div>
             ) : (
               <>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">ETH</span>
+                  <span className="text-white font-mono">
+                    {ethBalance ? (
+                      <TokenAmount amount={ethBalance} token={TOKENS.WETH} showSymbol={false} />
+                    ) : (
+                      '0.00'
+                    )}
+                  </span>
+                </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-300">USDT0</span>
                   <span className="text-white font-mono">

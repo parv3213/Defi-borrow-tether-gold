@@ -61,6 +61,13 @@ function formatBalance(balance: bigint, decimals: number): string {
   return `${integerPart}.${fractionalStr}`;
 }
 
+// Get ETH balance
+export async function getETHBalance(account: Address): Promise<bigint> {
+  return publicClient.getBalance({
+    address: account,
+  });
+}
+
 // Get USDT0 balance
 export async function getUSDT0Balance(account: Address): Promise<bigint> {
   return getTokenBalance(CONTRACTS.USDT0, account);
