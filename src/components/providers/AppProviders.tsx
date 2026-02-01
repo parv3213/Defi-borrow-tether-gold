@@ -44,7 +44,7 @@ export function AppProviders({ children }: AppProvidersProps) {
         loginMethods: ['email'],
         embeddedWallets: {
           ethereum: {
-            createOnLogin: 'users-without-wallets',
+            createOnLogin: 'all-users',
           },
         },
         defaultChain: arbitrum,
