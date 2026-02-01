@@ -253,3 +253,89 @@ export async function fetchAllMarkets(chainId: number = 42161): Promise<MarketSt
     return [];
   }
 }
+
+// Transaction types for position history
+interface TransactionItem {
+  id: string;
+  hash: string;
+  timestamp: number;
+  type: string;
+  data: {
+    assets?: string;
+    shares?: string;
+    seizedAssets?: string;
+    repaidAssets?: string;
+  };
+}
+
+// Fetch user position transactions from Morpho API
+export async function fetchPositionTransactions(
+  marketId: string,
+  userAddress: string,
+  chainId: number = 42161,
+  first: number = 20
+): Promise<TransactionItem[]> {
+  const query = gql`
+    query GetPositionTransactions(
+      $marketId: String!
+      $userAddress: String!
+      $chainId: Int!
+      $first: Int!
+    ) {
+      transactions(
+        where: {
+          marketUniqueKey_in: [$marketId]
+          userAddress_in: [$userAddress]
+          chainId_in: [$chainId]
+          type_in: [
+            MarketSupplyCollateral
+            MarketWithdrawCollateral
+            MarketBorrow
+            MarketRepay
+            MarketLiquidation
+            MarketSupply
+            MarketWithdraw
+          ]
+        }
+        orderBy: Timestamp
+        orderDirection: Desc
+        first: $first
+      ) {
+        items {
+          id
+          hash
+          timestamp
+          type
+          data {
+            ... on MarketCollateralTransferTransactionData {
+              assets
+            }
+            ... on MarketTransferTransactionData {
+              assets
+              shares
+            }
+            ... on MarketLiquidationTransactionData {
+              seizedAssets
+              repaidAssets
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const data = await client.request<{
+      transactions: { items: any[] };
+    }>(query, {
+      marketId,
+      userAddress: userAddress.toLowerCase(),
+      chainId,
+      first,
+    });
+    return data.transactions?.items || [];
+  } catch (error) {
+    console.error('Failed to fetch position transactions:', error);
+    return [];
+  }
+}

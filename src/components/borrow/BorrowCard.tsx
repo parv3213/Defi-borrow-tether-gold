@@ -93,6 +93,17 @@ export function BorrowCard() {
     }
   }, [txState.status, refetchBalances, refetchPosition, resetState]);
 
+  // Auto-fill borrow input when collateral input changes to suggested safe amount
+  useEffect(() => {
+    if (safeBorrowAmount > BigInt(0)) {
+      setBorrowInput(formatUnits(safeBorrowAmount, TOKENS.USDT0.decimals));
+    } else {
+      setBorrowInput('');
+    }
+    // We intentionally watch collateral input and safeBorrowAmount so
+    // the borrow value updates when the user changes collateral.
+  }, [collateralInput, safeBorrowAmount]);
+
   const handleBorrow = async () => {
     if (!collateralAmount || collateralAmount === BigInt(0)) return;
 

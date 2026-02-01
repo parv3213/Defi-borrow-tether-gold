@@ -63,10 +63,11 @@ export function DepositAddress() {
             </code>
             <button
               onClick={copyToClipboard}
-              className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              aria-label="Copy address"
+              className="w-12 h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
             >
               {copied ? (
-                <span className="text-green-400">✓</span>
+                <span className="text-green-400 text-lg">✓</span>
               ) : (
                 <svg
                   className="w-5 h-5 text-gray-300"

@@ -2,6 +2,7 @@
 
 import { BorrowCard } from '@/components/borrow/BorrowCard';
 import { PositionCard } from '@/components/borrow/PositionCard';
+import { PositionHistoryCard } from '@/components/borrow/PositionHistoryCard';
 import { RepayCard } from '@/components/borrow/RepayCard';
 import { Header } from '@/components/layout/Header';
 import { SwapCard } from '@/components/swap/SwapCard';
@@ -86,6 +87,7 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <PositionCard />
             <RepayCard />
+            <PositionHistoryCard />
           </div>
         </div>
 

@@ -68,3 +68,23 @@ export type Call = {
   data: `0x${string}`;
   value?: bigint;
 };
+
+// Position transaction types
+export type PositionTransactionType =
+  | 'MarketSupplyCollateral'
+  | 'MarketWithdrawCollateral'
+  | 'MarketBorrow'
+  | 'MarketRepay'
+  | 'MarketLiquidation'
+  | 'MarketSupply'
+  | 'MarketWithdraw';
+
+export interface PositionTransaction {
+  id: string;
+  hash: string;
+  timestamp: number;
+  type: PositionTransactionType;
+  assets: bigint;
+  shares: bigint;
+  user: string;
+}
