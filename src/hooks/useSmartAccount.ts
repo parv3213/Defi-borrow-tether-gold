@@ -92,20 +92,28 @@ export function useSmartAccount() {
         throw new Error('Smart account not initialized');
       }
 
-      // TODO Simulate transaction before sending
-      const hash = await state.nexusClient.sendTransaction({
-        calls,
-      });
+      try {
+        const hash = await state.nexusClient.sendTransaction({
+          calls,
+        });
+        console.log('Transaction sent, hash:', hash);
 
-      // Wait for transaction receipt
-      const receipt = await state.nexusClient.waitForTransactionReceipt({
-        hash,
-      });
+        // Wait for transaction receipt
+        const receipt = await state.nexusClient.waitForTransactionReceipt({
+          hash,
+        });
+        console.log('Transaction confirmed, receipt:', receipt);
 
-      return {
-        hash,
-        receipt,
-      };
+        return {
+          hash,
+          receipt,
+          error: null,
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        console.error('Transaction failed:', error);
+        throw new Error(errorMessage);
+      }
     },
     [state.nexusClient]
   );

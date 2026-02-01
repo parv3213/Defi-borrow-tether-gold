@@ -39,7 +39,8 @@ export function classifyError(error: unknown): ClassifiedError {
   if (
     lowerMessage.includes('insufficient balance') ||
     lowerMessage.includes('exceeds balance') ||
-    lowerMessage.includes('transfer amount exceeds balance')
+    lowerMessage.includes('transfer amount exceeds balance') ||
+    lowerMessage.includes('does not have sufficient funds')
   ) {
     return {
       type: ErrorType.INSUFFICIENT_BALANCE,
