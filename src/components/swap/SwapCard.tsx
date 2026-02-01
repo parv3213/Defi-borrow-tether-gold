@@ -58,6 +58,16 @@ export function SwapCard() {
     }
   }, [txState.status, refetchBalances, resetState]);
 
+  // If the user starts a new input after a completed/error transaction,
+  // clear the previous transaction state so the UI is ready for a new swap.
+  useEffect(() => {
+    if ((txState.status === 'success' || txState.status === 'error') && amountIn !== '') {
+      // Clear previous results and tx state immediately when user types a new input
+      setEstimatedOut(BigInt(0));
+      resetState();
+    }
+  }, [amountIn, txState.status, resetState]);
+
   const handleSwap = async () => {
     const parsed = parseTokenInput(amountIn, tokenIn.decimals);
     if (!parsed || parsed === BigInt(0)) return;

@@ -8,7 +8,7 @@ import { useBorrow } from '@/hooks/useBorrow';
 import { useMorphoMarket } from '@/hooks/useMorphoMarket';
 import { useMorphoPosition } from '@/hooks/useMorphoPosition';
 import { useTokenBalances } from '@/hooks/useTokenBalances';
-import { formatPercent, formatTokenAmount, parseTokenInput } from '@/lib/format';
+import { formatPercent, formatTokenAmount, formatUSD, parseTokenInput } from '@/lib/format';
 import { useEffect, useMemo, useState } from 'react';
 import { formatUnits } from 'viem';
 
@@ -78,6 +78,16 @@ export function BorrowCard() {
 
     return safeMax - currentBorrowed;
   }, [market, collateralAmount, position]);
+
+  // Projected collateral USD value (using oracle price)
+  const projectedCollateralValue = useMemo(() => {
+    if (!market || !collateralAmount || collateralAmount === BigInt(0)) {
+      return BigInt(0);
+    }
+
+    // collateralValue scaled by oracle: (tokens * oracle) / 10**36
+    return (collateralAmount * market.oraclePrice) / BigInt(10 ** 36);
+  }, [market, collateralAmount]);
 
   // Reset on success
   useEffect(() => {
@@ -185,7 +195,7 @@ export function BorrowCard() {
         </div>
 
         {/* Position preview */}
-        {collateralAmount && collateralAmount > BigInt(0) && (
+        {collateralAmount && Boolean(collateralAmount > BigInt(0)) ? (
           <div className="bg-gray-900 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Projected LTV</span>
@@ -194,6 +204,12 @@ export function BorrowCard() {
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Max LTV (Liquidation)</span>
               <span className="text-gray-300">{market ? formatPercent(market.lltv) : '-'}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Collateral Value</span>
+              <span className="text-gray-300">
+                {market ? formatUSD(projectedCollateralValue) : '-'}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Max Borrow</span>
@@ -205,6 +221,15 @@ export function BorrowCard() {
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Borrow APR</span>
                 <span className="text-gray-300">{formatPercent(market.borrowApr)}</span>
+              </div>
+            )}
+
+            {market && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Pool Liquidity</span>
+                <span className="text-gray-300">
+                  {formatTokenAmount(market.availableLiquidity, TOKENS.USDT0.decimals)} USDT0
+                </span>
               </div>
             )}
 
@@ -227,7 +252,7 @@ export function BorrowCard() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Error messages */}
         {hasInsufficientCollateral && (

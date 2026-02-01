@@ -10,7 +10,7 @@ export function formatTokenAmount(
   const num = parseFloat(formatted);
 
   if (num === 0) return '0';
-  if (num < 0.0001) return '< 0.0001';
+  if (num < 0.00001) return '< 0.00001';
 
   return num.toLocaleString('en-US', {
     minimumFractionDigits: 0,
