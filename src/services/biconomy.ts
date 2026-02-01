@@ -1,89 +1,103 @@
-import { createBicoPaymasterClient, createNexusClient, NexusClient } from '@biconomy/sdk';
-import { http, type Account, type Address, type WalletClient } from 'viem';
+import {
+  createMeeClient,
+  getMEEVersion,
+  MEEVersion,
+  toMultichainNexusAccount,
+  type MeeClient,
+  type MultichainSmartAccount,
+} from '@biconomy/abstractjs';
+import { http, type Address, type EIP1193Provider } from 'viem';
 import { arbitrum } from 'viem/chains';
 
-let nexusClientCache: NexusClient | null = null;
+let meeClientCache: MeeClient | null = null;
+let orchestratorCache: MultichainSmartAccount | null = null;
 let cachedSignerAddress: Address | null = null;
+let createSmartAccountInFlight: { address: Address; promise: Promise<SmartAccountResult> } | null =
+  null;
 
 const rpcUrl = process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || arbitrum.rpcUrls.default.http[0];
 
-// Check if gasless mode is available
+// Check if gasless/sponsored mode is available
 export function isGaslessEnabled(): boolean {
-  const bundlerUrl = process.env.NEXT_PUBLIC_BICONOMY_BUNDLER_URL;
-  const paymasterUrl = process.env.NEXT_PUBLIC_BICONOMY_PAYMASTER_URL;
-  return !!(bundlerUrl && paymasterUrl);
+  const apiKey = process.env.NEXT_PUBLIC_BICONOMY_MEE_API_KEY;
+  const enabled = !!apiKey;
+  return enabled;
 }
 
-export async function createSmartAccount(walletClient: WalletClient): Promise<NexusClient> {
-  const account = walletClient.account;
+// Check if staging (testnet) mode
+export function isStaging(): boolean {
+  const staging = process.env.NEXT_PUBLIC_BICONOMY_STAGING === 'true';
+  return staging;
+}
 
-  if (!account) {
-    throw new Error('Wallet client has no account');
+export interface SmartAccountResult {
+  meeClient: MeeClient;
+  orchestrator: MultichainSmartAccount;
+}
+
+export async function createSmartAccount(
+  provider: EIP1193Provider,
+  accountAddress: Address
+): Promise<SmartAccountResult> {
+  if (meeClientCache && orchestratorCache && cachedSignerAddress === accountAddress) {
+    return { meeClient: meeClientCache, orchestrator: orchestratorCache };
   }
 
-  const signerAddress = account.address;
+  console.log('createSmartAccountInFlight:', createSmartAccountInFlight);
+  if (createSmartAccountInFlight && createSmartAccountInFlight.address === accountAddress) {
+    return createSmartAccountInFlight.promise;
+  }
 
   // Return cached client if signer hasn't changed
-  if (nexusClientCache && cachedSignerAddress === signerAddress) {
-    return nexusClientCache;
+
+  const apiKey = process.env.NEXT_PUBLIC_BICONOMY_MEE_API_KEY;
+  const createPromise = (async () => {
+    // Create the multichain Nexus account (orchestrator)
+    // accountAddress must be passed so the orchestrator uses the Privy EOA address (EIP-7702)
+    const orchestrator = await toMultichainNexusAccount({
+      signer: provider,
+      chainConfigurations: [
+        {
+          chain: arbitrum,
+          transport: http(rpcUrl),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress,
+        },
+      ],
+    });
+
+    orchestrator.addressOn(arbitrum.id, true);
+
+    // Create MEE client with optional API key for sponsorship
+    const meeClient = await createMeeClient({
+      account: orchestrator,
+      ...(apiKey ? { apiKey } : {}),
+    });
+
+    // Cache the clients
+    meeClientCache = meeClient;
+    orchestratorCache = orchestrator;
+    cachedSignerAddress = accountAddress;
+
+    return { meeClient, orchestrator };
+  })();
+
+  createSmartAccountInFlight = { address: accountAddress, promise: createPromise };
+
+  try {
+    return await createPromise;
+  } finally {
+    createSmartAccountInFlight = null;
   }
-
-  const bundlerUrl = process.env.NEXT_PUBLIC_BICONOMY_BUNDLER_URL;
-  const paymasterUrl = process.env.NEXT_PUBLIC_BICONOMY_PAYMASTER_URL;
-
-  // Create a signer object that Biconomy expects
-  const signer = {
-    ...walletClient,
-    account: account as Account,
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let nexusClient: NexusClient;
-
-  if (bundlerUrl && paymasterUrl) {
-    // Full gasless mode with paymaster
-    const paymasterClient = createBicoPaymasterClient({
-      paymasterUrl,
-    });
-
-    nexusClient = await createNexusClient({
-      signer: signer as any,
-      chain: arbitrum,
-      transport: http(rpcUrl),
-      bundlerTransport: http(bundlerUrl),
-      paymaster: paymasterClient,
-    });
-  } else if (bundlerUrl) {
-    // Bundler only - user pays gas
-    nexusClient = await createNexusClient({
-      signer: signer as any,
-      chain: arbitrum,
-      transport: http(rpcUrl),
-      bundlerTransport: http(bundlerUrl),
-    });
-  } else {
-    // No bundler - use default bundler (may have limitations)
-    // For development/testing without Biconomy infrastructure
-    nexusClient = await createNexusClient({
-      signer: signer as any,
-      chain: arbitrum,
-      transport: http(rpcUrl),
-      // Use a public bundler endpoint for testing
-      bundlerTransport: http(rpcUrl),
-    });
-  }
-
-  nexusClientCache = nexusClient;
-  cachedSignerAddress = signerAddress;
-
-  return nexusClient;
 }
 
-export function getSmartAccountAddress(nexusClient: NexusClient): Address {
-  return nexusClient.account.address;
+export function getSmartAccountAddress(orchestrator: MultichainSmartAccount): Address {
+  const addr = orchestrator.addressOn(arbitrum.id, true);
+  return addr;
 }
 
 export function clearSmartAccountCache(): void {
-  nexusClientCache = null;
+  meeClientCache = null;
+  orchestratorCache = null;
   cachedSignerAddress = null;
 }

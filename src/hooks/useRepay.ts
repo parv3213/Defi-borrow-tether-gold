@@ -43,6 +43,9 @@ export function useRepay() {
         throw new Error('No debt to repay');
       }
 
+      // Update state to confirming once transaction is sent
+      setTxState({ status: 'confirming' });
+
       const result = await sendTransaction(calls);
       return result;
     },
@@ -70,6 +73,9 @@ export function useRepay() {
         params.withdrawAmount,
         smartAccountAddress as Address
       );
+
+      // Update state to confirming once transaction is sent
+      setTxState({ status: 'confirming' });
 
       const result = await sendTransaction(calls);
       return result;

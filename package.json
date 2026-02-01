@@ -11,7 +11,7 @@
     "format:all": "prettier --write ."
   },
   "dependencies": {
-    "@biconomy/sdk": "^0.0.29",
+    "@biconomy/abstractjs": "1.1.21",
     "@privy-io/react-auth": "^3.13.0",
     "@tanstack/react-query": "^5.90.20",
     "@uniswap/sdk-core": "^7.10.1",

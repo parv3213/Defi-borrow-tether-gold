@@ -30,6 +30,9 @@ export function useBorrow() {
         smartAccountAddress as Address
       );
 
+      // Update state to confirming once transaction is sent
+      setTxState({ status: 'confirming' });
+
       const result = await sendTransaction(calls);
       return result;
     },
