@@ -79,7 +79,13 @@ export function TokenInput({
         {balance !== undefined && (
           <div className="mt-2 flex items-center justify-between text-sm">
             <span className="text-gray-500">
-              Balance: <TokenAmount amount={balance} token={token} className="text-gray-400" />
+              Balance:{' '}
+              <TokenAmount
+                amount={balance}
+                token={token}
+                className="text-gray-400"
+                maxDecimals={5}
+              />
             </span>
             {onMax && (
               <button onClick={onMax} className="text-indigo-400 hover:text-indigo-300 font-medium">

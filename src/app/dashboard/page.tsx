@@ -8,6 +8,7 @@ import { Header } from '@/components/layout/Header';
 import { SwapCard } from '@/components/swap/SwapCard';
 import { DepositAddress } from '@/components/wallet/DepositAddress';
 import { WalletInfo } from '@/components/wallet/WalletInfo';
+import { WithdrawCard } from '@/components/wallet/WithdrawCard';
 import { useSmartAccount } from '@/hooks/useSmartAccount';
 import { isGaslessEnabled } from '@/services/biconomy';
 import { usePrivy } from '@privy-io/react-auth';
@@ -75,6 +76,7 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <WalletInfo />
             <DepositAddress />
+            {!gaslessEnabled && <WithdrawCard />}
           </div>
 
           {/* Middle column - Swap & Borrow */}
