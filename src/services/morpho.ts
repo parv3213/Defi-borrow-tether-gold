@@ -145,7 +145,8 @@ export async function buildRepayFullCalls(account: Address): Promise<Call[]> {
   const calls: Call[] = [];
 
   // Calculate approximate assets needed (add 1% buffer for interest accrual)
-  const estimatedAssets = (position.borrowedAssets * BigInt(101)) / BigInt(100);
+  // Add 1 additional wei to buffer to handle rounding issues with small amounts
+  const estimatedAssets = (position.borrowedAssets * BigInt(101)) / BigInt(100) + BigInt(1);
 
   // 1. Approve USDT0 to Morpho (with buffer)
   calls.push(buildApproveCall(CONTRACTS.USDT0, CONTRACTS.MORPHO_BLUE, estimatedAssets));
@@ -178,7 +179,11 @@ export async function getPosition(account: Address): Promise<MorphoPosition> {
     fetchMarketParams(),
   ]);
 
-  const [supplyShares, borrowShares, collateral] = positionResult;
+  const [supplyShares, borrowShares, collateralRaw] = positionResult;
+
+  // Fix: Treat 1 wei of collateral as 0 to avoid "insufficient collateral" errors
+  // This handles cases where rounding or dust leaves 1 wei that cannot be withdrawn
+  const collateral = collateralRaw <= BigInt(1) ? BigInt(0) : collateralRaw;
 
   // Get market state for share conversion
   const marketResult = await publicClient.readContract({
@@ -191,9 +196,12 @@ export async function getPosition(account: Address): Promise<MorphoPosition> {
   const [totalSupplyAssets, totalSupplyShares, totalBorrowAssets, totalBorrowShares] = marketResult;
 
   // Convert borrow shares to assets
+  // Use round-up division to match contract logic (assets = shares * totalAssets / totalShares)
+  // This ensures we don't underestimate debt
   const borrowedAssets =
     totalBorrowShares > BigInt(0)
-      ? (BigInt(borrowShares) * totalBorrowAssets) / totalBorrowShares
+      ? (BigInt(borrowShares) * totalBorrowAssets + totalBorrowShares - BigInt(1)) /
+        totalBorrowShares
       : BigInt(0);
 
   // Get oracle price for collateral valuation
