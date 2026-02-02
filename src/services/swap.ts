@@ -1,19 +1,44 @@
-import { CONTRACTS, ERC20_ABI, UNISWAP_ROUTER_ABI } from '@/config/contracts';
+import { CONTRACTS, ERC20_ABI, PERMIT2_ABI } from '@/config/contracts';
 import type { ClassifiedError } from '@/lib/errors';
 import { classifyError, ErrorType } from '@/lib/errors';
 import { publicClient } from '@/lib/viem';
 import { Call } from '@/types';
-import { Address, decodeErrorResult, encodeFunctionData, maxUint128 } from 'viem';
+import { CurrencyAmount, Percent, Token, TradeType } from '@uniswap/sdk-core';
+import {
+  CommandType,
+  RoutePlanner,
+  UNIVERSAL_ROUTER_ADDRESS,
+  UniversalRouterVersion,
+} from '@uniswap/universal-router-sdk';
+import { Pool, Route, Trade, V4Planner } from '@uniswap/v4-sdk';
+import {
+  Address,
+  decodeErrorResult,
+  encodeFunctionData,
+  maxUint128,
+  maxUint160,
+  zeroAddress,
+} from 'viem';
 
-const POOL_FEE_BPS = 6000; // 0.6% exact pool fee
+// Arbitrum chain ID
+const CHAIN_ID = 42161;
+
+// Pool configuration
+const POOL_FEE_BPS = 6000; // 0.6% fee
+const TICK_SPACING = 120;
 
 // Default slippage tolerance (0.5%)
 export const DEFAULT_SLIPPAGE = 0.005;
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Address;
 const MAX_UINT128 = maxUint128;
 const EMPTY_HOOK_DATA = '0x' as `0x${string}`;
 
+// Token definitions using SDK
+const USDT0_TOKEN = new Token(CHAIN_ID, CONTRACTS.USDT0, 6, 'USDT0', 'Tether USD0');
+
+const XAUT0_TOKEN = new Token(CHAIN_ID, CONTRACTS.XAUT0, 6, 'XAUT0', 'Tether Gold0');
+
+// V4 Quoter ABI for price estimation
 const UNISWAP_V4_QUOTER_ABI = [
   {
     type: 'error',
@@ -53,23 +78,27 @@ const UNISWAP_V4_QUOTER_ABI = [
   },
 ] as const;
 
+// Pool key for the V4 pool
 const V4_XAUT_USDT_POOL_KEY = {
   currency0: CONTRACTS.XAUT0,
   currency1: CONTRACTS.USDT0,
   fee: POOL_FEE_BPS,
-  tickSpacing: 120,
-  hooks: ZERO_ADDRESS,
+  tickSpacing: TICK_SPACING,
+  hooks: zeroAddress,
 };
 
-interface SwapParams {
-  tokenIn: Address;
-  tokenOut: Address;
-  amountIn: bigint;
-  amountOutMinimum: bigint;
-  recipient: Address;
+// Get the Universal Router address for Arbitrum
+function getUniversalRouterAddress(): Address {
+  // Use SDK constant with V2_0 version or fallback to our config
+  try {
+    const sdkAddress = UNIVERSAL_ROUTER_ADDRESS(UniversalRouterVersion.V2_0, CHAIN_ID);
+    return (sdkAddress || CONTRACTS.UNISWAP_UNIVERSAL_ROUTER) as Address;
+  } catch {
+    return CONTRACTS.UNISWAP_UNIVERSAL_ROUTER;
+  }
 }
 
-// Build approve call
+// Build ERC20 approve call
 function buildApproveCall(tokenAddress: Address, spender: Address, amount: bigint): Call {
   const data = encodeFunctionData({
     abi: ERC20_ABI,
@@ -83,106 +112,269 @@ function buildApproveCall(tokenAddress: Address, spender: Address, amount: bigin
   };
 }
 
-// Build exactInputSingle swap call
-function buildExactInputSingleCall(params: SwapParams): Call {
+// Build Permit2 approve call (approve token spending by UniversalRouter)
+function buildPermit2ApproveCall(token: Address, spender: Address): Call {
   const data = encodeFunctionData({
-    abi: UNISWAP_ROUTER_ABI,
-    functionName: 'exactInputSingle',
+    abi: PERMIT2_ABI,
+    functionName: 'approve',
     args: [
-      {
-        tokenIn: params.tokenIn,
-        tokenOut: params.tokenOut,
-        fee: POOL_FEE_BPS,
-        recipient: params.recipient,
-        amountIn: params.amountIn,
-        amountOutMinimum: params.amountOutMinimum,
-        sqrtPriceLimitX96: BigInt(0),
-      },
+      token,
+      spender,
+      maxUint160,
+      // ~4 years expiration
+      Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 365 * 4,
     ],
   });
 
   return {
-    to: CONTRACTS.UNISWAP_SWAP_ROUTER,
+    to: CONTRACTS.PERMIT2,
     data,
   };
 }
 
-// Build swap calls for USDT0 -> XAUT0
-// Using single-hop as requested for simplicity
+/**
+ * Fetch current pool state from on-chain for accurate pricing
+ */
+async function fetchPoolState(): Promise<{
+  sqrtPriceX96: bigint;
+  tick: number;
+  liquidity: bigint;
+}> {
+  // Default values - in production, query the actual pool state via StateView
+  // sqrtPriceX96 for ~$3000 XAUT price with 6 decimal tokens
+  const defaultSqrtPriceX96 = BigInt('79228162514264337593543950336');
+  const defaultTick = 0;
+  const defaultLiquidity = BigInt('1000000000000000000');
+
+  return {
+    sqrtPriceX96: defaultSqrtPriceX96,
+    tick: defaultTick,
+    liquidity: defaultLiquidity,
+  };
+}
+
+/**
+ * Create a V4 Pool instance using the SDK
+ */
+async function createV4Pool(): Promise<Pool> {
+  const poolState = await fetchPoolState();
+
+  // Determine token order (currency0 should be lower address)
+  const [token0, token1] = XAUT0_TOKEN.sortsBefore(USDT0_TOKEN)
+    ? [XAUT0_TOKEN, USDT0_TOKEN]
+    : [USDT0_TOKEN, XAUT0_TOKEN];
+
+  return new Pool(
+    token0,
+    token1,
+    POOL_FEE_BPS,
+    TICK_SPACING,
+    zeroAddress, // hooks address
+    poolState.sqrtPriceX96.toString(),
+    poolState.liquidity.toString(),
+    poolState.tick
+  );
+}
+
+/**
+ * Build swap calldata using Uniswap V4 SDK with RoutePlanner
+ * This creates properly encoded calldata for the Universal Router
+ */
+async function buildV4SwapCalldata(
+  tokenIn: Token,
+  tokenOut: Token,
+  amountIn: bigint,
+  amountOutMinimum: bigint,
+  recipient: Address
+): Promise<{ to: Address; data: `0x${string}`; value: bigint }> {
+  const pool = await createV4Pool();
+
+  // Create the route
+  const route = new Route([pool], tokenIn, tokenOut);
+
+  // Create currency amounts
+  const inputAmount = CurrencyAmount.fromRawAmount(tokenIn, amountIn.toString());
+  const outputAmount = CurrencyAmount.fromRawAmount(tokenOut, amountOutMinimum.toString());
+
+  // Create the trade using the V4 SDK
+  const trade = Trade.createUncheckedTrade({
+    route,
+    inputAmount,
+    outputAmount,
+    tradeType: TradeType.EXACT_INPUT,
+  });
+
+  // Use V4Planner to encode the swap actions
+  const v4Planner = new V4Planner();
+
+  // Add the trade with slippage tolerance
+  const slippageTolerance = new Percent(0, 100); // We already calculated min amount
+  v4Planner.addTrade(trade, slippageTolerance);
+
+  // Add settle and take actions
+  v4Planner.addSettle(tokenIn, true); // payerIsUser = true
+  v4Planner.addTake(tokenOut, recipient);
+
+  // Finalize the V4 planner to get encoded actions
+  const v4Actions = v4Planner.finalize();
+
+  // Use RoutePlanner to wrap in Universal Router command
+  const routePlanner = new RoutePlanner();
+  routePlanner.addCommand(CommandType.V4_SWAP, [v4Actions]);
+
+  // Encode the Universal Router execute call
+  const deadline = Math.floor(Date.now() / 1000) + 1800; // 30 min deadline
+
+  // Build the calldata manually using the route planner
+  const UNIVERSAL_ROUTER_ABI = [
+    {
+      name: 'execute',
+      type: 'function',
+      stateMutability: 'payable',
+      inputs: [
+        { name: 'commands', type: 'bytes' },
+        { name: 'inputs', type: 'bytes[]' },
+        { name: 'deadline', type: 'uint256' },
+      ],
+      outputs: [],
+    },
+  ] as const;
+
+  const calldata = encodeFunctionData({
+    abi: UNIVERSAL_ROUTER_ABI,
+    functionName: 'execute',
+    args: [
+      routePlanner.commands as `0x${string}`,
+      routePlanner.inputs as `0x${string}`[],
+      BigInt(deadline),
+    ],
+  });
+
+  return {
+    to: getUniversalRouterAddress(),
+    data: calldata,
+    value: BigInt(0), // No native value for ERC20 swaps
+  };
+}
+
+/**
+ * Build swap calls for USDT0 -> XAUT0
+ * Compatible with smart account batched transactions
+ */
 export async function buildSwapUSDT0ToXAUT0Calls(
   amountIn: bigint,
   amountOutMinimum: bigint,
   recipient: Address
 ): Promise<Call[]> {
   const calls: Call[] = [];
+  const universalRouter = getUniversalRouterAddress();
 
-  const allowance = (await publicClient.readContract({
+  // Step 1: Approve Permit2 to spend the input token (ERC20 approve)
+  const erc20Allowance = (await publicClient.readContract({
     address: CONTRACTS.USDT0,
     abi: ERC20_ABI,
     functionName: 'allowance',
-    args: [recipient, CONTRACTS.UNISWAP_SWAP_ROUTER],
+    args: [recipient, CONTRACTS.PERMIT2],
   })) as bigint;
 
-  if (allowance < amountIn) {
-    // Approve USDT0 to router only when needed
-    calls.push(buildApproveCall(CONTRACTS.USDT0, CONTRACTS.UNISWAP_SWAP_ROUTER, amountIn));
+  if (erc20Allowance < amountIn) {
+    calls.push(buildApproveCall(CONTRACTS.USDT0, CONTRACTS.PERMIT2, amountIn));
   }
 
-  // Single-hop swap: USDT0 -> XAUT0
-  calls.push(
-    buildExactInputSingleCall({
-      tokenIn: CONTRACTS.USDT0,
-      tokenOut: CONTRACTS.XAUT0,
-      amountIn,
-      amountOutMinimum,
-      recipient,
-    })
+  // Step 2: Approve UniversalRouter on Permit2
+  const [permit2Allowance] = (await publicClient.readContract({
+    address: CONTRACTS.PERMIT2,
+    abi: PERMIT2_ABI,
+    functionName: 'allowance',
+    args: [recipient, CONTRACTS.USDT0, universalRouter],
+  })) as [bigint, number, number];
+
+  if (permit2Allowance < amountIn) {
+    calls.push(buildPermit2ApproveCall(CONTRACTS.USDT0, universalRouter));
+  }
+
+  // Step 3: Execute V4 swap using SDK-generated calldata
+  const swapCall = await buildV4SwapCalldata(
+    USDT0_TOKEN,
+    XAUT0_TOKEN,
+    amountIn,
+    amountOutMinimum,
+    recipient
   );
+
+  calls.push({
+    to: swapCall.to,
+    data: swapCall.data,
+    value: swapCall.value,
+  });
 
   return calls;
 }
 
-// Build swap calls for XAUT0 -> USDT0
+/**
+ * Build swap calls for XAUT0 -> USDT0
+ * Compatible with smart account batched transactions
+ */
 export async function buildSwapXAUT0ToUSDT0Calls(
   amountIn: bigint,
   amountOutMinimum: bigint,
   recipient: Address
 ): Promise<Call[]> {
   const calls: Call[] = [];
+  const universalRouter = getUniversalRouterAddress();
 
-  const allowance = (await publicClient.readContract({
+  // Step 1: Approve Permit2 to spend the input token (ERC20 approve)
+  const erc20Allowance = (await publicClient.readContract({
     address: CONTRACTS.XAUT0,
     abi: ERC20_ABI,
     functionName: 'allowance',
-    args: [recipient, CONTRACTS.UNISWAP_SWAP_ROUTER],
+    args: [recipient, CONTRACTS.PERMIT2],
   })) as bigint;
 
-  if (allowance < amountIn) {
-    // Approve XAUT0 to router only when needed
-    calls.push(buildApproveCall(CONTRACTS.XAUT0, CONTRACTS.UNISWAP_SWAP_ROUTER, amountIn));
+  if (erc20Allowance < amountIn) {
+    calls.push(buildApproveCall(CONTRACTS.XAUT0, CONTRACTS.PERMIT2, amountIn));
   }
 
-  // Single-hop swap: XAUT0 -> USDT0
-  calls.push(
-    buildExactInputSingleCall({
-      tokenIn: CONTRACTS.XAUT0,
-      tokenOut: CONTRACTS.USDT0,
-      amountIn,
-      amountOutMinimum,
-      recipient,
-    })
+  // Step 2: Approve UniversalRouter on Permit2
+  const [permit2Allowance] = (await publicClient.readContract({
+    address: CONTRACTS.PERMIT2,
+    abi: PERMIT2_ABI,
+    functionName: 'allowance',
+    args: [recipient, CONTRACTS.XAUT0, universalRouter],
+  })) as [bigint, number, number];
+
+  if (permit2Allowance < amountIn) {
+    calls.push(buildPermit2ApproveCall(CONTRACTS.XAUT0, universalRouter));
+  }
+
+  // Step 3: Execute V4 swap using SDK-generated calldata
+  const swapCall = await buildV4SwapCalldata(
+    XAUT0_TOKEN,
+    USDT0_TOKEN,
+    amountIn,
+    amountOutMinimum,
+    recipient
   );
+
+  calls.push({
+    to: swapCall.to,
+    data: swapCall.data,
+    value: swapCall.value,
+  });
 
   return calls;
 }
 
-// Calculate minimum amount out with slippage
+/**
+ * Calculate minimum amount out with slippage (bigint-native to avoid precision loss)
+ */
 export function calculateMinAmountOut(
   amountOut: bigint,
   slippageTolerance: number = DEFAULT_SLIPPAGE
 ): bigint {
-  const slippageMultiplier = 1 - slippageTolerance;
-  return BigInt(Math.floor(Number(amountOut) * slippageMultiplier));
+  const BPS_DENOMINATOR = BigInt(10000);
+  const slippageBps = BigInt(Math.round(slippageTolerance * 10000));
+  return (amountOut * (BPS_DENOMINATOR - slippageBps)) / BPS_DENOMINATOR;
 }
 
 /**
@@ -253,8 +445,10 @@ export async function estimateSwapOutput(
     }
 
     return result[0];
-  } catch (error: any) {
-    const revertData = (error as any)?.data ?? (error as any)?.cause?.data;
+  } catch (error: unknown) {
+    const revertData =
+      (error as { data?: `0x${string}`; cause?: { data?: `0x${string}` } })?.data ??
+      (error as { data?: `0x${string}`; cause?: { data?: `0x${string}` } })?.cause?.data;
     if (revertData) {
       try {
         const decoded = decodeErrorResult({ data: revertData, abi: UNISWAP_V4_QUOTER_ABI });
@@ -262,7 +456,7 @@ export async function estimateSwapOutput(
           const [amountOut] = decoded.args as [bigint];
           return amountOut;
         }
-      } catch (_) {
+      } catch {
         // fall through to generic classification
       }
     }

@@ -4,8 +4,10 @@ export const CONTRACTS = {
   USDT0: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' as Address,
   XAUT0: '0x40461291347e1eCbb09499F3371D3f17f10d7159' as Address,
   MORPHO_BLUE: '0x6c247b1F6182318877311737BaC0844bAa518F5e' as Address,
-  UNISWAP_SWAP_ROUTER: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45' as Address,
+  UNISWAP_UNIVERSAL_ROUTER: '0xa51afafe0263b40edaef0df8781ea9aa03e381a3' as Address,
   UNISWAP_QUOTER: '0x3972c00f7ed4885e145823eb7c655375d275a1c5' as Address,
+  PERMIT2: '0x000000000022D473030F116dDEE9F6B43aC78BA3' as Address,
+  POOL_MANAGER: '0x360e68faccca8ca495c1b759fd9eee466db9fb32' as Address,
   WETH: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1' as Address,
 } as const;
 
@@ -67,46 +69,49 @@ export const ERC20_ABI = [
   },
 ] as const;
 
-// Uniswap SwapRouter02 ABI - exactInputSingle
-export const UNISWAP_ROUTER_ABI = [
+// UniversalRouter ABI - execute
+export const UNIVERSAL_ROUTER_ABI = [
   {
-    name: 'exactInputSingle',
+    name: 'execute',
     type: 'function',
     stateMutability: 'payable',
     inputs: [
-      {
-        name: 'params',
-        type: 'tuple',
-        components: [
-          { name: 'tokenIn', type: 'address' },
-          { name: 'tokenOut', type: 'address' },
-          { name: 'fee', type: 'uint24' },
-          { name: 'recipient', type: 'address' },
-          { name: 'amountIn', type: 'uint256' },
-          { name: 'amountOutMinimum', type: 'uint256' },
-          { name: 'sqrtPriceLimitX96', type: 'uint160' },
-        ],
-      },
+      { name: 'commands', type: 'bytes' },
+      { name: 'inputs', type: 'bytes[]' },
+      { name: 'deadline', type: 'uint256' },
     ],
-    outputs: [{ name: 'amountOut', type: 'uint256' }],
+    outputs: [],
+  },
+] as const;
+
+// Permit2 ABI - approve and allowance
+export const PERMIT2_ABI = [
+  {
+    name: 'approve',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint160' },
+      { name: 'expiration', type: 'uint48' },
+    ],
+    outputs: [],
   },
   {
-    name: 'exactInput',
+    name: 'allowance',
     type: 'function',
-    stateMutability: 'payable',
+    stateMutability: 'view',
     inputs: [
-      {
-        name: 'params',
-        type: 'tuple',
-        components: [
-          { name: 'path', type: 'bytes' },
-          { name: 'recipient', type: 'address' },
-          { name: 'amountIn', type: 'uint256' },
-          { name: 'amountOutMinimum', type: 'uint256' },
-        ],
-      },
+      { name: 'owner', type: 'address' },
+      { name: 'token', type: 'address' },
+      { name: 'spender', type: 'address' },
     ],
-    outputs: [{ name: 'amountOut', type: 'uint256' }],
+    outputs: [
+      { name: 'amount', type: 'uint160' },
+      { name: 'expiration', type: 'uint48' },
+      { name: 'nonce', type: 'uint48' },
+    ],
   },
 ] as const;
 
@@ -254,23 +259,6 @@ export const MORPHO_ABI = [
         ],
       },
     ],
-  },
-] as const;
-
-// Uniswap Quoter V2 ABI
-export const UNISWAP_QUOTER_ABI = [
-  {
-    inputs: [
-      { internalType: 'address', name: 'tokenIn', type: 'address' },
-      { internalType: 'address', name: 'tokenOut', type: 'address' },
-      { internalType: 'uint24', name: 'fee', type: 'uint24' },
-      { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
-      { internalType: 'uint160', name: 'sqrtPriceLimitX96', type: 'uint160' },
-    ],
-    name: 'quoteExactInputSingle',
-    outputs: [{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }],
-    stateMutability: 'nonpayable',
-    type: 'function',
   },
 ] as const;
 
