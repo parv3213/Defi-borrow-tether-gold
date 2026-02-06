@@ -46,6 +46,7 @@ export function AppProviders({ children }: AppProvidersProps) {
           ethereum: {
             createOnLogin: 'all-users',
           },
+          showWalletUIs: false,
         },
         defaultChain: arbitrum,
         supportedChains: [arbitrum],

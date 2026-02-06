@@ -69,8 +69,16 @@ export async function createSmartAccount(
     orchestrator.addressOn(arbitrum.id, true);
 
     // Create MEE client with optional API key for sponsorship
+    // The SDK checks process.env.STAGING internally, but Next.js only exposes
+    // NEXT_PUBLIC_* vars to the browser, so we pass the URL explicitly when staging.
+    const staging = isStaging();
+    const meeUrl = staging
+      ? 'https://staging-network.biconomy.io/v1'
+      : 'https://network.biconomy.io/v1';
+
     const meeClient = await createMeeClient({
       account: orchestrator,
+      url: meeUrl,
       ...(apiKey ? { apiKey } : {}),
     });
 

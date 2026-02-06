@@ -5,6 +5,8 @@ import {
   clearSmartAccountCache,
   createSmartAccount,
   getSmartAccountAddress,
+  getCounterfactualAddress,
+  isGaslessEnabled,
 } from '@/services/biconomy';
 import { getMeeScanLink, type MeeClient, type MultichainSmartAccount } from '@biconomy/abstractjs';
 import { usePrivy, useSign7702Authorization, useWallets } from '@privy-io/react-auth';
@@ -16,6 +18,7 @@ interface SmartAccountState {
   meeClient: MeeClient | null;
   orchestrator: MultichainSmartAccount | null;
   smartAccountAddress: Address | null;
+  counterfactualAddress: Address | null;
   authorization: SignedAuthorization | null;
   isLoading: boolean;
   error: Error | null;
@@ -26,12 +29,14 @@ let globalInitPromise: Promise<{
   meeClient: MeeClient;
   orchestrator: MultichainSmartAccount;
   smartAccountAddress: Address;
+  counterfactualAddress: Address | null;
   authorization: SignedAuthorization;
 } | null> | null = null;
 let globalInitResult: {
   meeClient: MeeClient;
   orchestrator: MultichainSmartAccount;
   smartAccountAddress: Address;
+  counterfactualAddress: Address | null;
   authorization: SignedAuthorization;
 } | null = null;
 let globalInitForAddress: Address | null = null;
@@ -50,6 +55,7 @@ export function useSmartAccount() {
     meeClient: null,
     orchestrator: null,
     smartAccountAddress: null,
+    counterfactualAddress: null,
     authorization: null,
     isLoading: false,
     error: null,
@@ -71,6 +77,7 @@ export function useSmartAccount() {
         meeClient: globalInitResult.meeClient,
         orchestrator: globalInitResult.orchestrator,
         smartAccountAddress: globalInitResult.smartAccountAddress,
+        counterfactualAddress: globalInitResult.counterfactualAddress,
         authorization: globalInitResult.authorization,
         isLoading: false,
         error: null,
@@ -88,6 +95,7 @@ export function useSmartAccount() {
             meeClient: result.meeClient,
             orchestrator: result.orchestrator,
             smartAccountAddress: result.smartAccountAddress,
+            counterfactualAddress: result.counterfactualAddress,
             authorization: result.authorization,
             isLoading: false,
             error: null,
@@ -122,8 +130,9 @@ export function useSmartAccount() {
         const { meeClient, orchestrator } = await createSmartAccount(provider, walletAddress);
 
         const smartAccountAddress = getSmartAccountAddress(orchestrator);
+        const counterfactualAddress = getCounterfactualAddress(orchestrator);
 
-        const result = { meeClient, orchestrator, smartAccountAddress, authorization };
+        const result = { meeClient, orchestrator, smartAccountAddress, counterfactualAddress, authorization };
         globalInitResult = result;
         return result;
       } catch (error) {
@@ -141,6 +150,7 @@ export function useSmartAccount() {
           meeClient: result.meeClient,
           orchestrator: result.orchestrator,
           smartAccountAddress: result.smartAccountAddress,
+          counterfactualAddress: result.counterfactualAddress,
           authorization: result.authorization,
           isLoading: false,
           error: null,
@@ -162,6 +172,7 @@ export function useSmartAccount() {
         meeClient: null,
         orchestrator: null,
         smartAccountAddress: null,
+        counterfactualAddress: null,
         authorization: null,
         isLoading: false,
         error: null,
@@ -200,11 +211,14 @@ export function useSmartAccount() {
 
         // Get the actual quote for execution
         // delegate + authorization enable EIP-7702 (smart account installed on EOA)
+        const gasless = isGaslessEnabled();
         const quote = await state.meeClient.getQuote({
           instructions: [instruction],
-          sponsorship: true,
           delegate: true,
           authorizations: [state.authorization],
+          ...(gasless
+            ? { sponsorship: true }
+            : { feeToken: { address: CONTRACTS.USDT0, chainId: arbitrum.id } }),
         });
         console.log('Quote:', JSON.stringify(quote, null, 2));
 
