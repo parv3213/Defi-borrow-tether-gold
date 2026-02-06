@@ -61,7 +61,14 @@ export function useSwap() {
     onSuccess: data => {
       setTxState({ status: 'success', hash: data.hash });
       // Invalidate balance queries
-      queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
+      if (smartAccountAddress) {
+        queryClient.invalidateQueries({
+          queryKey: ['tokenBalances', smartAccountAddress],
+          exact: true,
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
+      }
     },
     onError: error => {
       const classified = classifyError(error);

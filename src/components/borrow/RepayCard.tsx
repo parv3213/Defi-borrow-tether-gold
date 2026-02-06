@@ -15,8 +15,8 @@ import { formatUnits } from 'viem';
 type Mode = 'repay' | 'withdraw';
 
 export function RepayCard() {
-  const { usdt0Balance, refetch: refetchBalances } = useTokenBalances();
-  const { data: position, refetch: refetchPosition } = useMorphoPosition();
+  const { usdt0Balance } = useTokenBalances();
+  const { data: position } = useMorphoPosition();
   const { data: market } = useMorphoMarket();
   const { repay, withdraw, txState, resetState, isLoading } = useRepay();
 
@@ -68,14 +68,12 @@ export function RepayCard() {
     if (txState.status === 'success') {
       setAmount('');
       setRepayFull(false);
-      refetchBalances();
-      refetchPosition();
       const timeout = setTimeout(() => {
         resetState();
       }, 3000);
       return () => clearTimeout(timeout);
     }
-  }, [txState.status, refetchBalances, refetchPosition, resetState]);
+  }, [txState.status, resetState]);
 
   const handleAction = async () => {
     if (mode === 'repay') {

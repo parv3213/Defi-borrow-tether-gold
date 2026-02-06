@@ -13,8 +13,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatUnits } from 'viem';
 
 export function BorrowCard() {
-  const { xaut0Balance, refetch: refetchBalances } = useTokenBalances();
-  const { data: position, refetch: refetchPosition } = useMorphoPosition();
+  const { xaut0Balance } = useTokenBalances();
+  const { data: position } = useMorphoPosition();
   const { data: market } = useMorphoMarket();
   const { borrow, txState, resetState, isLoading } = useBorrow();
 
@@ -94,14 +94,12 @@ export function BorrowCard() {
     if (txState.status === 'success') {
       setCollateralInput('');
       setBorrowInput('');
-      refetchBalances();
-      refetchPosition();
       const timeout = setTimeout(() => {
         resetState();
       }, 3000);
       return () => clearTimeout(timeout);
     }
-  }, [txState.status, refetchBalances, refetchPosition, resetState]);
+  }, [txState.status, resetState]);
 
   // Auto-fill borrow input when collateral input changes to suggested safe amount
   useEffect(() => {

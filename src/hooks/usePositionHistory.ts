@@ -7,16 +7,20 @@ import { useQuery } from '@tanstack/react-query';
 import { useSmartAccount } from './useSmartAccount';
 
 export function usePositionHistory() {
-  const { smartAccountAddress } = useSmartAccount();
+  const { smartAccountAddress, counterfactualAddress } = useSmartAccount();
+
+  // Use counterfactual address if available (for historical transactions before EIP-7702),
+  // otherwise fall back to smartAccountAddress
+  const queryAddress = counterfactualAddress || smartAccountAddress;
 
   return useQuery<PositionTransaction[]>({
-    queryKey: ['positionHistory', smartAccountAddress],
+    queryKey: ['positionHistory', queryAddress],
     queryFn: async () => {
-      if (!smartAccountAddress) {
-        throw new Error('No smart account address');
+      if (!queryAddress) {
+        throw new Error('No account address');
       }
 
-      const transactions = await fetchPositionTransactions(MARKET_ID, smartAccountAddress);
+      const transactions = await fetchPositionTransactions(MARKET_ID, queryAddress);
 
       return transactions.map(tx => {
         // Extract assets based on transaction type
@@ -42,11 +46,11 @@ export function usePositionHistory() {
           type: tx.type as PositionTransactionType,
           assets,
           shares,
-          user: smartAccountAddress,
+          user: queryAddress as string,
         };
       });
     },
-    enabled: !!smartAccountAddress,
+    enabled: !!queryAddress,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 }

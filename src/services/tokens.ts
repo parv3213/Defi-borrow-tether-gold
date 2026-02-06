@@ -18,7 +18,22 @@ export async function getTokenBalance(tokenAddress: Address, account: Address): 
 export async function getTokenBalances(account: Address): Promise<TokenBalance[]> {
   const tokens = [TOKENS.USDT0, TOKENS.XAUT0];
 
-  const balances = await Promise.all(tokens.map(token => getTokenBalance(token.address, account)));
+  const contracts = [
+    {
+      address: TOKENS.USDT0.address,
+      abi: ERC20_ABI,
+      functionName: 'balanceOf',
+      args: [account],
+    },
+    {
+      address: TOKENS.XAUT0.address,
+      abi: ERC20_ABI,
+      functionName: 'balanceOf',
+      args: [account],
+    },
+  ] as const;
+
+  const balances = await publicClient.multicall({ contracts, allowFailure: false });
 
   return tokens.map((token, i) => ({
     token,

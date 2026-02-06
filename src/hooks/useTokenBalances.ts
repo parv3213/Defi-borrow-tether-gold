@@ -14,6 +14,8 @@ export function useTokenBalances() {
     queryFn: () => getTokenBalances(smartAccountAddress as Address),
     enabled: !!smartAccountAddress,
     refetchInterval: 15000, // Refresh every 15 seconds
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const ethQuery = useQuery<bigint>({
@@ -21,6 +23,8 @@ export function useTokenBalances() {
     queryFn: () => getETHBalance(smartAccountAddress as Address),
     enabled: !!smartAccountAddress,
     refetchInterval: 15000, // Refresh every 15 seconds
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const usdt0Balance = tokenQuery.data?.find(b => b.token.symbol === 'USDT0');

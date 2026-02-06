@@ -104,6 +104,11 @@ export function getSmartAccountAddress(orchestrator: MultichainSmartAccount): Ad
   return addr;
 }
 
+export function getCounterfactualAddress(orchestrator: MultichainSmartAccount): Address | null {
+  const addr = orchestrator.addressOn(arbitrum.id, false);
+  return addr || null;
+}
+
 export function clearSmartAccountCache(): void {
   meeClientCache = null;
   orchestratorCache = null;
