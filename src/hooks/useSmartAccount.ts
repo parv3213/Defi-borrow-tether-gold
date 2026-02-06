@@ -229,18 +229,21 @@ export function useSmartAccount() {
 
         // Execute the quote
         const result = await state.meeClient.executeQuote({ quote });
-        const hash = result.hash;
+        const superTxHash = result.hash;
 
         // Get MEE scan link for tracking
-        const meeScanLink = getMeeScanLink(hash);
+        const meeScanLink = getMeeScanLink(superTxHash);
 
         // Wait for transaction to be confirmed
         console.log('Waiting for transaction confirmation...');
-        const receipt = await state.meeClient.waitForSupertransactionReceipt({ hash });
+        const receipt = await state.meeClient.waitForSupertransactionReceipt({ hash: superTxHash });
         console.log('Transaction confirmed:', receipt);
 
+        // Return the actual on-chain transaction hash (first receipt) instead of the supertransaction hash
+        const onChainHash = receipt.receipts?.[0]?.transactionHash ?? superTxHash;
+
         return {
-          hash,
+          hash: onChainHash,
           meeScanLink,
           receipt,
         };
