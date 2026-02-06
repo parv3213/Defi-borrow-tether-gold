@@ -12,7 +12,7 @@ import { Address, formatUnits, isAddress } from 'viem';
 type WithdrawToken = 'USDT0' | 'ETH';
 
 export function WithdrawCard() {
-  const { usdt0Balance, ethBalance, refetch: refetchBalances } = useTokenBalances();
+  const { usdt0Balance, ethBalance } = useTokenBalances();
   const { withdraw, txState, resetState, isLoading } = useWithdraw();
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -30,13 +30,12 @@ export function WithdrawCard() {
     if (txState.status === 'success') {
       setAmount('');
       setRecipientAddress('');
-      refetchBalances();
       const timeout = setTimeout(() => {
         resetState();
       }, 3000);
       return () => clearTimeout(timeout);
     }
-  }, [txState.status, refetchBalances, resetState]);
+  }, [txState.status, resetState]);
 
   const handleWithdraw = async () => {
     if (!parsedAmount || parsedAmount <= BigInt(0) || !isValidAddress) return;

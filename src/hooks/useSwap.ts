@@ -49,6 +49,9 @@ export function useSwap() {
         );
       }
 
+      // Update state to confirming once transaction is sent
+      setTxState({ status: 'confirming' });
+
       const result = await sendTransaction(calls);
       return result;
     },
@@ -58,7 +61,14 @@ export function useSwap() {
     onSuccess: data => {
       setTxState({ status: 'success', hash: data.hash });
       // Invalidate balance queries
-      queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
+      if (smartAccountAddress) {
+        queryClient.invalidateQueries({
+          queryKey: ['tokenBalances', smartAccountAddress],
+          exact: true,
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
+      }
     },
     onError: error => {
       const classified = classifyError(error);

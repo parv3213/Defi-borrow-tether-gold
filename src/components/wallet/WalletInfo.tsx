@@ -5,6 +5,7 @@ import { TOKENS } from '@/config/tokens';
 import { useSmartAccount } from '@/hooks/useSmartAccount';
 import { useTokenBalances } from '@/hooks/useTokenBalances';
 import { getArbiscanAddressUrl, truncateAddress } from '@/lib/format';
+import { isGaslessEnabled } from '@/services/biconomy';
 
 export function WalletInfo() {
   const { smartAccountAddress, isLoading: accountLoading } = useSmartAccount();
@@ -15,6 +16,8 @@ export function WalletInfo() {
     isLoading: balancesLoading,
     isLoadingEth,
   } = useTokenBalances();
+
+  const gaslessEnabled = isGaslessEnabled();
 
   if (accountLoading) {
     return (
@@ -64,21 +67,23 @@ export function WalletInfo() {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-300">ETH</span>
-                  <span className="text-white font-mono">
-                    {ethBalance ? (
-                      <TokenAmount
-                        amount={ethBalance}
-                        token={TOKENS.WETH}
-                        showSymbol={false}
-                        maxDecimals={6}
-                      />
-                    ) : (
-                      '0.00'
-                    )}
-                  </span>
-                </div>
+                {!gaslessEnabled && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300">ETH</span>
+                    <span className="text-white font-mono">
+                      {ethBalance ? (
+                        <TokenAmount
+                          amount={ethBalance}
+                          token={TOKENS.WETH}
+                          showSymbol={false}
+                          maxDecimals={6}
+                        />
+                      ) : (
+                        '0.00'
+                      )}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-300">USDT0</span>
                   <span className="text-white font-mono">

@@ -116,19 +116,30 @@ export async function buildSupplyAndBorrowCalls(
   return calls;
 }
 
+// Max uint256 for approvals
+const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+
 // Build calls to repay debt
 export async function buildRepayAssetsCalls(
   repayAmount: bigint,
   account: Address
 ): Promise<Call[]> {
   const marketParams = await fetchMarketParams();
+  const position = await getPosition(account);
   const calls: Call[] = [];
 
-  // 1. Approve USDT0 to Morpho
-  calls.push(buildApproveCall(CONTRACTS.USDT0, CONTRACTS.MORPHO_BLUE, repayAmount));
+  // If repaying full debt or more, use shares-based repayment to avoid dust
+  if (position.borrowShares > BigInt(0) && repayAmount >= position.borrowedAssets) {
+    // Approve max to cover any interest accrual between read and execution
+    calls.push(buildApproveCall(CONTRACTS.USDT0, CONTRACTS.MORPHO_BLUE, MAX_UINT256));
 
-  // 2. Repay (using assets, not shares)
-  calls.push(buildRepayCall(marketParams, repayAmount, BigInt(0), account));
+    // Repay using shares to clear all debt completely
+    calls.push(buildRepayCall(marketParams, BigInt(0), position.borrowShares, account));
+  } else {
+    // Partial repay using assets
+    calls.push(buildApproveCall(CONTRACTS.USDT0, CONTRACTS.MORPHO_BLUE, repayAmount));
+    calls.push(buildRepayCall(marketParams, repayAmount, BigInt(0), account));
+  }
 
   return calls;
 }
@@ -144,14 +155,11 @@ export async function buildRepayFullCalls(account: Address): Promise<Call[]> {
 
   const calls: Call[] = [];
 
-  // Calculate approximate assets needed (add 1% buffer for interest accrual)
-  // Add 1 additional wei to buffer to handle rounding issues with small amounts
-  const estimatedAssets = (position.borrowedAssets * BigInt(101)) / BigInt(100) + BigInt(1);
+  // Approve max uint256 to guarantee sufficient allowance regardless of
+  // interest accrual between the read and on-chain execution.
+  calls.push(buildApproveCall(CONTRACTS.USDT0, CONTRACTS.MORPHO_BLUE, MAX_UINT256));
 
-  // 1. Approve USDT0 to Morpho (with buffer)
-  calls.push(buildApproveCall(CONTRACTS.USDT0, CONTRACTS.MORPHO_BLUE, estimatedAssets));
-
-  // 2. Repay using shares (to clear all debt)
+  // Repay using shares (to clear all debt exactly)
   calls.push(buildRepayCall(marketParams, BigInt(0), position.borrowShares, account));
 
   return calls;
@@ -181,9 +189,7 @@ export async function getPosition(account: Address): Promise<MorphoPosition> {
 
   const [supplyShares, borrowShares, collateralRaw] = positionResult;
 
-  // Fix: Treat 1 wei of collateral as 0 to avoid "insufficient collateral" errors
-  // This handles cases where rounding or dust leaves 1 wei that cannot be withdrawn
-  const collateral = collateralRaw <= BigInt(1) ? BigInt(0) : collateralRaw;
+  const collateral = collateralRaw;
 
   // Get market state for share conversion
   const marketResult = await publicClient.readContract({

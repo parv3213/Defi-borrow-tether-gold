@@ -19,5 +19,7 @@ export function useMorphoPosition() {
     },
     enabled: !!smartAccountAddress,
     refetchInterval: 15000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }

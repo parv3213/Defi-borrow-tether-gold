@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { formatUnits } from 'viem';
 
 export function SwapCard() {
-  const { usdt0Balance, xaut0Balance, refetch: refetchBalances } = useTokenBalances();
+  const { usdt0Balance, xaut0Balance } = useTokenBalances();
   const { swap, txState, resetState, isLoading } = useSwap();
 
   const [direction, setDirection] = useState<'USDT0_TO_XAUT0' | 'XAUT0_TO_USDT0'>('USDT0_TO_XAUT0');
@@ -49,14 +49,13 @@ export function SwapCard() {
     if (txState.status === 'success') {
       setAmountIn('');
       setEstimatedOut(BigInt(0));
-      refetchBalances();
       // Reset after showing success for a moment
       const timeout = setTimeout(() => {
         resetState();
       }, 3000);
       return () => clearTimeout(timeout);
     }
-  }, [txState.status, refetchBalances, resetState]);
+  }, [txState.status, resetState]);
 
   const handleAmountChange = (value: string) => {
     if (txState.status === 'success' || txState.status === 'error') {
