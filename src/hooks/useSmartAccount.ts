@@ -212,13 +212,18 @@ export function useSmartAccount() {
         // Get the actual quote for execution
         // delegate + authorization enable EIP-7702 (smart account installed on EOA)
         const gasless = isGaslessEnabled();
+        const paymentParams = gasless
+          ? ({ sponsorship: true } as const)
+          : ({ feeToken: { address: CONTRACTS.USDT0, chainId: arbitrum.id } } as const);
+
+        // Simulate first — getQuote with simulate:true will throw if the
+        // MEE node detects the userOps would revert, preventing wasted gas.
         const quote = await state.meeClient.getQuote({
           instructions: [instruction],
           delegate: true,
           authorizations: [state.authorization],
-          ...(gasless
-            ? { sponsorship: true }
-            : { feeToken: { address: CONTRACTS.USDT0, chainId: arbitrum.id } }),
+          simulation: { simulate: true },
+          ...paymentParams,
         });
         console.log('Quote:', JSON.stringify(quote, null, 2));
 
