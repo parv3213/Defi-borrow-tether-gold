@@ -91,13 +91,16 @@ export function RepayCard() {
 
   const handleMax = () => {
     if (mode === 'repay') {
-      // Max is the debt or balance, whichever is smaller
+      // If balance covers full debt, use shares-based full repay to avoid dust
       if (position && usdt0Balance?.balance) {
-        const maxRepay =
-          position.borrowedAssets < usdt0Balance.balance
-            ? position.borrowedAssets
-            : usdt0Balance.balance;
-        setAmount(formatUnits(maxRepay, TOKENS.USDT0.decimals));
+        if (usdt0Balance.balance >= position.borrowedAssets) {
+          // Balance covers full debt - use repayFull for exact share-based repayment
+          setRepayFull(true);
+          setAmount('');
+        } else {
+          // Balance doesn't cover full debt - repay as much as possible
+          setAmount(formatUnits(usdt0Balance.balance, TOKENS.USDT0.decimals));
+        }
       }
     } else {
       if (maxWithdraw > BigInt(0)) {
